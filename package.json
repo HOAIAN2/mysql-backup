@@ -1,0 +1,16 @@
+{
+  "name": "mysql-backup",
+  "version": "0.0.1",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "backup": "node --env-file=.env src/backup.js"
+  },
+  "keywords": [],
+  "author": "HOAIAN",
+  "license": "ISC",
+  "description": "NodeJS project use to dump MySQL/MariaDB database with multi threads for better performance",
+  "dependencies": {
+    "mysql2": "^3.11.2"
+  }
+}
