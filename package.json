@@ -4,7 +4,8 @@
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
-    "backup": "node --env-file=.env src/backup.js"
+    "backup": "node --env-file=.env src/backup.js",
+    "restore": "node --env-file=.env src/restore.js"
   },
   "keywords": [],
   "author": "HOAIAN",

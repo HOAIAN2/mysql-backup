@@ -12,10 +12,16 @@ This is a MySQL / MariaDB dump tool written in NodeJS to dump multiple databases
 Create `.env` file on root of project
 
 ```env
-DB_HOST=localhost
-DB_USER=admin_backup
-DB_PASSWORD=password
-DB_DATABASE=database
+DB_HOST=
+DB_USER=
+DB_PASSWORD=
+DB_DATABASE=
+
+RESTORE_TARGET_DIR=
+RS_DB_HOST=
+RS_DB_USER=
+RS_DB_PASSWORD=
+RS_DB_DATABASE=
 ```
 
 Run backup with env file
