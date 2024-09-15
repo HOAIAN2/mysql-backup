@@ -30,4 +30,8 @@ Run backup with env file
 npm run backup
 ```
 
-Restore (Comming soon)
+Run restore with the folder name that need to restore (config in .env)
+
+```console
+npm run restore
+```
