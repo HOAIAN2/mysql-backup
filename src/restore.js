@@ -1,23 +1,66 @@
+const mysql = require('mysql2/promise');
+const { exec } = require('child_process');
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const os = require('os');
+
+// Database config
+const dbConfig = {
+    host: process.env.RS_DB_HOST,
+    user: process.env.RS_DB_USER,
+    password: process.env.RS_DB_PASSWORD,
+    database: process.env.RS_DB_DATABASE
+};
 
 const dumpDir = path.join(__dirname, '..', 'dumps', process.env.RESTORE_TARGET_DIR);
 
-const fileList = fs.readdirSync(dumpDir).filter(file => file.endsWith('.sql'));
+async function getSQLFiles() {
+    try {
+        const files = await fs.promises.readdir(dumpDir);
+        return files.filter(file => file.endsWith('.sql'));
+    } catch (error) {
+        console.error('Error reading dump directory:', error);
+        return [];
+    }
+}
 
-const message = `Restore ${fileList.length} .sql files`;
-console.time(message);
-fileList.forEach(file => {
-    const command = [
-        'mysql',
-        `--host=${process.env.RS_DB_HOST}`,
-        `--user=${process.env.RS_DB_USER}`,
-        `--password=${process.env.RS_DB_PASSWORD}`,
-        `--init-command="SET FOREIGN_KEY_CHECKS=0;"`,
-        process.env.RS_DB_DATABASE,
-        `< ${path.join(dumpDir, file)}`
-    ].join(' ');
-    execSync(command);
-});
-console.timeEnd(message);
+function restoreFile(fileName) {
+    return new Promise((resolve, reject) => {
+        const filePath = path.join(dumpDir, fileName);
+        const restoreCommand = [
+            'mysql',
+            `--host=${dbConfig.host}`,
+            `--user=${dbConfig.user}`,
+            `--password=${dbConfig.password}`,
+            dbConfig.database,
+            `< ${filePath}`
+        ].join(' ');
+        exec(restoreCommand, (error, stdout, stderr) => {
+            if (error) {
+                console.error(`Error restoring ${fileName}:`, stderr);
+                reject(error);
+            } else {
+                resolve(stdout);
+            }
+        });
+    });
+}
+
+async function main() {
+    const sqlFiles = await getSQLFiles();
+    if (sqlFiles.length === 0) {
+        console.log('No .sql files found.');
+        return;
+    }
+    const maxThreads = Math.min(sqlFiles.length, os.cpus().length);
+    const message = `Restoring ${sqlFiles.length} .sql files to database "${dbConfig.database}" on ${dbConfig.host}`;
+    console.time(message);
+    for (let i = 0; i < sqlFiles.length; i += maxThreads) {
+        const chunk = sqlFiles.slice(i, i + maxThreads);
+        const restorePromises = chunk.map(file => restoreFile(file));
+        await Promise.all(restorePromises);
+    }
+    console.timeEnd(message);
+}
+
+main();
