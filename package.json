@@ -2,7 +2,7 @@
   "name": "mysql-backup",
   "version": "0.0.1",
   "main": "index.js",
-  "type": "commonjs",
+  "type": "module",
   "scripts": {
     "backup": "node --env-file=.env src/backup.js",
     "restore": "node --env-file=.env src/restore.js"

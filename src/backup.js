@@ -1,8 +1,11 @@
-const mysql = require('mysql2/promise');
-const { exec } = require('child_process');
-const fs = require('fs');
-const path = require('path');
-const os = require('os');
+import fs from 'fs';
+import mysql from 'mysql2/promise';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import runCommand from './utils/run-command.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const dbConfig = {
     host: process.env.DB_HOST,
@@ -37,33 +40,26 @@ async function getListTables() {
     }
 }
 
-function dumpTable(tableName) {
-    return new Promise((resolve, reject) => {
-        const filePath = path.join(dumpFolder, `${tableName}.sql`);
-        const dumpCommand = [
-            'mysqldump',
-            '--compress',
-            '--skip-ssl',
-            '--quick --single-transaction',
-            `--host=${dbConfig.host}`,
-            `--user=${dbConfig.user}`,
-            `--password=${dbConfig.password}`,
-            dbConfig.database,
-            tableName,
-            `--result-file=${filePath}`
-        ].join(' ');
-        exec(dumpCommand, (error, stdout, stderr) => {
-            if (error) {
-                console.error(`Error dumping table ${tableName}:`, stderr);
-                reject(error);
-            } else {
-                resolve(stdout);
-            }
-        });
-    });
+async function dumpTable(tableName) {
+    const filePath = path.join(dumpFolder, `${tableName}.sql`);
+    const dumpCommand = [
+        'mysqldump',
+        '--compress',
+        '--skip-ssl',
+        '--quick --single-transaction',
+        `--host=${dbConfig.host}`,
+        `--user=${dbConfig.user}`,
+        `--password=${dbConfig.password}`,
+        dbConfig.database,
+        tableName,
+        `--result-file=${filePath}`
+    ].join(' ');
+    await runCommand(dumpCommand);
+    return tableName;
 }
 
 async function main() {
+    let isError = false;
     createDumpFolder();
     const tables = await getListTables();
     if (tables.length === 0) {
@@ -71,14 +67,15 @@ async function main() {
         return;
     }
     const dumpPromises = tables.map(table => dumpTable(table));
-    const maxThreads = Math.min(dumpPromises.length, os.cpus().length);
-
     const message = `Backup ${tables.length} tables on database "${dbConfig.database}" from ${dbConfig.host}`;
     console.time(message);
-    for (let i = 0; i < dumpPromises.length; i += maxThreads) {
-        const chunk = dumpPromises.slice(i, i + maxThreads);
-        await Promise.all(chunk);
-    }
-    console.timeEnd(message);
+    const result = await Promise.allSettled(dumpPromises);
+    result.forEach(promise => {
+        if (promise.status === 'rejected') {
+            isError = true;
+            console.error(`Fail to backup ${promise.value} table.`);
+        }
+    });
+    if (!isError) console.timeEnd(message);
 }
 main();
