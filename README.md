@@ -30,8 +30,8 @@ Run backup with env file
 npm run backup
 ```
 
-Run restore with the folder name that need to restore (config in .env)
+Run restore with default mysql
 
 ```console
-npm run restore
+time mysql --user=<ADMIN_BACKUP> --password=<PASSWORD> demo < <(cat /path/to/your/restore/*.sql)
 ```
