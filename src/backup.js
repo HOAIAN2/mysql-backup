@@ -43,16 +43,14 @@ async function getListTables() {
 async function dumpTable(tableName) {
     const filePath = path.join(dumpFolder, `${tableName}.sql`);
     const dumpCommand = [
-        'mysqldump',
-        '--compress',
-        '--skip-ssl',
-        '--quick --single-transaction',
+        process.env.DUMP_PROGRAM,
         `--host=${dbConfig.host}`,
         `--user=${dbConfig.user}`,
         `--password=${dbConfig.password}`,
         dbConfig.database,
         tableName,
-        `--result-file=${filePath}`
+        `--result-file=${filePath}`,
+        process.env.DUMP_EXTRA_ARGS
     ].join(' ');
     await runCommand(dumpCommand);
     return tableName;
