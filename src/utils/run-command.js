@@ -8,4 +8,5 @@ export default async function runCommand(command = '') {
     if (stderr) {
         Promise.reject(stderr);
     }
+    return stdout;
 }
