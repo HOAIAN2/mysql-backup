@@ -2,20 +2,14 @@ import fs from 'fs';
 import mysql from 'mysql2/promise';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import backupSettings from './config/backup.js';
 import runCommand from './utils/run-command.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const dbConfig = {
-    host: process.env.DB_HOST,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_DATABASE
-};
-
 const currentTimestamp = String(new Date().getTime());
-const dumpFolder = path.join(__dirname, '..', 'dumps', `${dbConfig.database}-${currentTimestamp}`);
+const dumpFolder = path.join(__dirname, '..', 'dumps', `${backupSettings.connection.database}-${currentTimestamp}`);
 
 function createDumpFolder() {
     if (!fs.existsSync(dumpFolder)) {
@@ -26,9 +20,12 @@ function createDumpFolder() {
 async function getListTables() {
     let connection;
     try {
-        connection = await mysql.createConnection(dbConfig);
+        const getListTablesMessage = 'Get list tables';
+        console.time(getListTablesMessage);
+        connection = await mysql.createConnection(backupSettings.connection);
         const [rows] = await connection.query("SHOW TABLES");
         const tables = rows.map(row => Object.values(row)[0]);
+        console.timeEnd(getListTablesMessage);
         return tables;
     } catch (error) {
         console.error('Error retrieving tables:', error);
@@ -43,11 +40,11 @@ async function getListTables() {
 async function dumpTable(tableName) {
     const filePath = path.join(dumpFolder, `${tableName}.sql`);
     const dumpCommand = [
-        process.env.DUMP_PROGRAM,
-        `--host=${dbConfig.host}`,
-        `--user=${dbConfig.user}`,
-        `--password=${dbConfig.password}`,
-        dbConfig.database,
+        backupSettings.dumpProgram,
+        `--host=${backupSettings.connection.host}`,
+        `--user=${backupSettings.connection.user}`,
+        `--password=${backupSettings.connection.password}`,
+        backupSettings.connection.database,
         tableName,
         `--result-file=${filePath}`,
         process.env.DUMP_EXTRA_ARGS
@@ -65,8 +62,8 @@ async function main() {
         return;
     }
     const dumpPromises = tables.map(table => dumpTable(table));
-    const message = `Backup ${tables.length} tables on database "${dbConfig.database}" from ${dbConfig.host}`;
-    console.time(message);
+    const backupMessage = `Backup ${tables.length} tables on database "${backupSettings.connection.database}" from ${backupSettings.connection.host}`;
+    console.time(backupMessage);
     const result = await Promise.allSettled(dumpPromises);
     result.forEach(promise => {
         if (promise.status === 'rejected') {
@@ -74,6 +71,6 @@ async function main() {
             console.error(`Fail to backup ${promise.value} table.`);
         }
     });
-    if (!isError) console.timeEnd(message);
+    if (!isError) console.timeEnd(backupMessage);
 }
 main();
