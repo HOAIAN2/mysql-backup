@@ -47,7 +47,7 @@ async function dumpTable(tableName) {
         backupSettings.connection.database,
         tableName,
         `--result-file=${filePath}`,
-        process.env.DUMP_EXTRA_ARGS
+        backupSettings.extraArgs
     ].join(' ');
     await runCommand(dumpCommand);
     return tableName;
