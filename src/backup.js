@@ -68,7 +68,7 @@ async function main() {
     result.forEach(promise => {
         if (promise.status === 'rejected') {
             isError = true;
-            console.error(`Fail to backup ${promise.value} table.`);
+            console.log(promise);
         }
     });
     if (!isError) console.timeEnd(backupMessage);
